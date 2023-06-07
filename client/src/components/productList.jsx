@@ -6,80 +6,24 @@ import {
   Image,
   useDisclosure,
 } from "@chakra-ui/react";
-import {
-  Table,
-  Thead,
-  Tbody,
-  Tfoot,
-  Tr,
-  Th,
-  Td,
-  TableContainer,
-  IconButton,
-} from "@chakra-ui/react";
+import { Table, Thead, Tbody, Tr, Th, Td } from "@chakra-ui/react";
 import { EditIcon, DeleteIcon } from "@chakra-ui/icons";
-// import ProductCard from "./productCard";
 import { useEffect, useState } from "react";
 import { api } from "../api/api";
 import { EditProduct } from "./editProduct";
 import { DeleteProduct } from "./deleteProduct";
 
-export default function ProductList() {
+export default function ProductList({ products }) {
   const [editProductId, setEditProductId] = useState(null);
   const [deleteProductId, setDeleteProductId] = useState(null);
-  const [products, setProducts] = useState([]);
+  const [name, setName] = useState(null);
+  const [price, setPrice] = useState(null);
+  const [description, setDescription] = useState(null);
+  const [category_id, setCategory_id] = useState(null);
+  const [product_url, setProduct_url] = useState(null);
+
   const modalEdit = useDisclosure();
   const modalDelete = useDisclosure();
-
-  const [totalPages, setTotalPages] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 3;
-
-  console.log(products);
-  console.log(totalPages);
-
-  useEffect(() => {
-    fetchProduct(currentPage);
-  }, [currentPage]);
-
-  //fetchProducts
-  async function fetchProduct(page) {
-    // try {
-    const response = await api.get("/products", {
-      params: {
-        page,
-        limit: parseInt(itemsPerPage),
-      },
-    });
-    console.log(response.data);
-    const { products: dataProducts, totalPages: dataTotalPages } =
-      response.data;
-    setProducts(dataProducts);
-    setTotalPages(dataTotalPages);
-    // } catch (err) {
-    // console.log(err.message);
-    // }
-  }
-
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-  };
-
-  const renderPagination = () => {
-    const pages = [];
-    for (let i = 1; i <= totalPages; i++) {
-      pages.push(
-        <Button
-          key={i}
-          onClick={() => handlePageChange(i)}
-          _focus={{ bg: "#B42318", color: "white" }}
-        >
-          {i}
-        </Button>
-      );
-    }
-    return pages;
-  };
 
   return (
     <>
@@ -112,6 +56,11 @@ export default function ProductList() {
                     variant="ghost"
                     onClick={() => {
                       setEditProductId(val.id);
+                      setName(val.name);
+                      setPrice(val.price);
+                      setDescription(val.description);
+                      setCategory_id(val.category_id);
+                      setProduct_url(val.product_url);
                       modalEdit.onOpen();
                     }}
                   >
@@ -120,11 +69,17 @@ export default function ProductList() {
                       id={editProductId}
                       isOpen={modalEdit.isOpen}
                       onClose={modalEdit.onClose}
+                      name={name}
+                      price={price}
+                      description={description}
+                      category_id={category_id}
+                      product_url={product_url}
                     />
                   </Button>
                   <Button
                     onClick={() => {
                       setDeleteProductId(val.id);
+
                       modalDelete.onOpen();
                     }}
                     aria-label="Delete"
@@ -144,9 +99,6 @@ export default function ProductList() {
           ))}
         </Tbody>
       </Table>
-      <Center gap={3} p={2}>
-        {renderPagination()}
-      </Center>
     </>
   );
 }

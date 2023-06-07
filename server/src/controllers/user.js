@@ -2,10 +2,60 @@ const db = require("../models");
 const bcrypt = require("bcrypt");
 const { nanoid } = require("nanoid");
 const moment = require("moment");
-const { Op } = require("sequelize");
-const user = require("../models/user");
+const avatarUser = process.env.avatarUser;
 
 const userController = {
+  getAllUser: async (req, res) => {
+    try {
+      const { page, limit, search, role } = req.query;
+      const currentPage = page || 1;
+      const itemsPerPage = limit || 10;
+      const offset = (currentPage - 1) * itemsPerPage;
+
+      const { count, rows } = role
+        ? await db.User.findAndCountAll({
+            limit: parseInt(itemsPerPage),
+            offset,
+            where: {
+              name: {
+                [db.Sequelize.Op.like]: `%${search ? search : ""}%`,
+              },
+              role: role ? role : null,
+            },
+          })
+        : await db.User.findAndCountAll({
+            limit: parseInt(itemsPerPage),
+            offset,
+            where: {
+              name: {
+                [db.Sequelize.Op.like]: `%${search ? search : ""}%`,
+              },
+            },
+          });
+      const totalPages = Math.ceil(count / itemsPerPage);
+      const { count: all } = await db.User.findAndCountAll();
+      const { count: admin } = await db.User.findAndCountAll({
+        where: {
+          role: "ADMIN",
+        },
+      });
+      const { count: cashier } = await db.User.findAndCountAll({
+        where: {
+          role: "CASHIER",
+        },
+      });
+      return res.send({
+        users: rows,
+        totalPages,
+        all,
+        admin,
+        cashier,
+      });
+    } catch (err) {
+      console.log(err.message);
+      return res.status(500).send(err.message);
+    }
+  },
   registerCashier: async (req, res) => {
     try {
       const { name, email, password, phone } = req.body;
@@ -30,6 +80,7 @@ const userController = {
   registerAdmin: async (req, res) => {
     try {
       const { name, email, password, phone } = req.body;
+      const { filename } = req.file;
       const hashPassword = await bcrypt.hash(password, 10);
 
       await db.User.create({
@@ -38,6 +89,7 @@ const userController = {
         password: hashPassword,
         phone,
         role: "ADMIN",
+        avatar_url: avatarUser + filename,
       });
       return res.send({
         message: "register admin berhasil",
@@ -139,7 +191,7 @@ const userController = {
           role: ["CASHIER", "ADMIN"],
         },
       });
-
+      console.log(user);
       if (user) {
         const match = await bcrypt.compare(password, user.dataValues.password);
         if (match) {
@@ -153,6 +205,7 @@ const userController = {
             token: generateToken,
             payload: JSON.stringify(payload),
             status: "LOGIN",
+            role: user.dataValues.role,
           });
           return res.send({
             message: "login berhasil",
@@ -173,7 +226,7 @@ const userController = {
     try {
       let token = req.headers.authorization;
       token = token.split(" ")[1];
-      console.log(token);
+      // console.log(token);
       let p = await db.Token.findOne({
         where: {
           token,
@@ -183,21 +236,21 @@ const userController = {
           valid: true,
         },
       });
-      console.log(p);
-      console.log(token);
+      // console.log(p);
+      // console.log(token);
 
       if (!p) {
         throw new Error("token has expired");
       }
 
-      console.log("helli");
+      // console.log("helli");
 
       let user = await db.User.findOne({
         where: {
           id: JSON.parse(p.dataValues.payload).id,
         },
       });
-      console.log("hello");
+      // console.log("hello");
       // delete user.dataValues.password;
       req.user = user;
       next();

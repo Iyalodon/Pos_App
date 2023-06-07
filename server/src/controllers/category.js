@@ -1,42 +1,69 @@
 const db = require("../models");
-const categori = require("../models/categori");
+
 const categoryController = {
-  //menarik semua database
-  getAll: async (req, res) => {
+  createCategory: async (req, res) => {
     try {
-      const category = await db.Categori.findAll();
-      return res.send(category);
+      const { name } = req.body;
+      await db.Category.create({
+        name,
+      }).then((result) => res.send(result));
     } catch (err) {
-      console.log(err);
-      return res.status(500).send({
-        msg: err.message,
-      });
+      console.log(err.message);
+      return res.status(500).send(err.message);
     }
   },
-
-  deleteById: async (req, res) => {
+  getAllCategory: async (req, res) => {
     try {
-      const category = await db.Categori.findOne({
+      const { page, limit, search } = req.query;
+      const currentPage = page || 1;
+      const itemsPerPage = limit || 10;
+      const offset = (currentPage - 1) * itemsPerPage;
+
+      const { count, rows } = await db.Category.findAndCountAll({
+        limit: parseInt(itemsPerPage),
+        offset,
+        where: {
+          name: {
+            [db.Sequelize.Op.like]: `%${search ? search : ""}%`,
+          },
+        },
+      });
+      const totalPages = Math.ceil(count / itemsPerPage);
+      return res.send({ category: rows, totalPages });
+    } catch (err) {
+      console.log(err.message);
+      return res.status(500).send(err.message);
+    }
+  },
+  deleteCategory: async (req, res) => {
+    try {
+      await db.Category.destroy({
         where: {
           id: req.params.id,
         },
       });
-
-      if (category) {
-        await category.destroy();
-
-        return res.send({
-          msg: "Kategori telah dihapus",
-          value: categori,
-        });
-      } else {
-        throw new Error("Kategori tidak ditemukan");
-      }
+      return res.send({ message: "success deleted" });
     } catch (err) {
-      console.log(err);
-      return res.status(500).send({
-        msg: err.message,
-      });
+      console.log(err.message);
+      return res.status(500).send(err.message);
+    }
+  },
+  editProduct: async (req, res) => {
+    try {
+      const { name } = req.body;
+      await db.Category.update(
+        {
+          name,
+        },
+        {
+          where: {
+            id: req.params.id,
+          },
+        }
+      ).then((result) => res.send(result));
+    } catch (err) {
+      console.log(err.message);
+      return res.status(500).send(err.message);
     }
   },
 };
